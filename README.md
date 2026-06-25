@@ -261,4 +261,6 @@ sentiment-pulse-analyzer/
 
 ## Author
 
-Built by [**AayuShen**](https://github.com/AayuShen).
+Built with ❤️ by [**AayuShen**](https://github.com/AayuShen). If this project helps you, drop a ⭐ on the repo—it means a lot! Always open to questions, suggestions, and collaboration. Happy coding! 🚀
+
+<p align="right"><img src="screenshots/mascot.png" width="60" alt="mascot"></p>
