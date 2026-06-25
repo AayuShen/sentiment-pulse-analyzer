@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.so
+
+# Virtual environment
+voicepulse/venv/
+venv/
+
+# Node
+voicepulse/frontend/node_modules/
+
+# Audio dataset - DO NOT UPLOAD
+Audio_Dataset/
+
+# Runtime data
+voicepulse/backend/data/recordings/
+voicepulse/logs/
+voicepulse/results/
+voicepulse/test_audio/
+
+# Environment secrets
+.env
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Build outputs
+dist/
+voicepulse/frontend/dist/
+
+# Large model caches
+.cache/
+huggingface/

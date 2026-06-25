@@ -1,0 +1,16 @@
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+celery>=5.4.0
+redis>=5.0.4
+whisperx>=3.1.0
+pyannote.audio>=3.1.0
+transformers>=4.40.0
+torch>=2.3.0
+openai>=1.30.0
+motor>=3.4.0
+pymongo>=4.7.0
+pydantic>=2.7.0
+pydantic-settings>=2.3.0
+python-dotenv>=1.0.1
+python-multipart>=0.0.9
+websockets>=12.0
