@@ -2,9 +2,7 @@
 
 **Real-time multilingual voice sentiment analysis — from raw customer calls to actionable emotional intelligence.**
 
-Ever wondered what your customers are *really* feeling during a support call? Not just what they say, but the emotional texture underneath? That's what Sentiment Pulse Analyzer does. Upload a call recording — in any of 5+ Indian languages — and within minutes, you get a full breakdown: who spoke, what they felt, whether the emotion shifted mid-call, and even a curated summary for your agents.
-
-It's like having a hyper-observant quality analyst who listens to every call and never gets tired.
+Upload a call recording — in any of 5+ Indian languages — and get a full breakdown: who spoke, what they felt, whether the emotion shifted mid-call, and a curated summary for your agents.
 
 ---
 
@@ -20,7 +18,6 @@ We don't settle for just "positive" vs "negative." Real conversations are more n
 | **Negative** 😕 | Mild disappointment or dissatisfaction — but NOT anger | *"I expected better... this is disappointing."* |
 | **Frustrated** 😤 | The customer is actively angry, irritated, or venting. This is the strongest negative signal | *"I've been waiting for TWO hours, this is ridiculous!"* |
 
-> **Why five?** Because lumping "mildly unhappy" and "furious" into the same bucket buries critical red flags. And calling someone "positive" when they're just *relieved* misses the real story. We designed this taxonomy to surface what actually matters.
 
 ---
 
@@ -32,25 +29,21 @@ Every uploaded audio file goes through a carefully orchestrated five-stage pipel
 🎙️ Audio Upload → 🔤 Transcription → 👥 Diarization → 💡 Sentiment Classification → 📊 Results + Critique
 ```
 
-### Step 1 — Transcription (WhisperX)
-We use **WhisperX** (the `large-v2` model) to convert speech to timestamped text. It handles English, Hindi, Tamil, Telugu, and several other Indian languages with strong accuracy. WhisperX also handles language detection automatically, so you don't need to manually tag each file.
+### 1. Transcription — WhisperX `large-v2`
+Converts speech to timestamped text with word-level alignment. Handles language detection automatically.
 
-### Step 2 — Speaker Diarization (Pyannote)
-**Pyannote Audio 3.1** splits the transcript by speaker. Who is the customer? Who is the agent? Pyannote analyzes the acoustic signal to identify *who said what*, giving us a clean, speaker-labeled transcript. This is VRAM-heavy, so our pipeline smartly offloads WhisperX to CPU before running diarization on GPU — squeezing everything onto a single GPU card.
+### 2. Speaker Diarization — Pyannote Audio 3.1
+Splits transcript by speaker (customer vs agent). WhisperX is offloaded to CPU before diarization to fit within a single GPU.
 
-### Step 3 — Sentiment Classification (Groq + DeBERTa-v3)
-Here's where the magic happens. We run a **two-tier classification**:
+### 3. Sentiment Classification — Groq LLaMA 3.1 8B + DeBERTa-v3 Fallback
+- **Primary**: Groq API classifies the full transcript into 5 labels with high-confidence scores (typically 0.85–0.99).
+- **Fallback**: Local DeBERTa-v3 zero-shot with 3 labels if Groq is unavailable.
 
-- **Primary Engine — Groq (LLaMA 3.1 8B Instant)**: The transcript is sent to Groq's ultra-fast inference API with a carefully engineered prompt that distinguishes between all five labels. Groq's LLM picks up on context, phrasing, and emotional subtext that keyword-based classifiers miss.
-- **Fallback Engine — Local DeBERTa-v3**: If Groq is unavailable (rate limit, network issue), we seamlessly fall back to a zero-shot DeBERTa-v3 model running locally on GPU, using 3 labels (Positive / Negative / Neutral) for higher per-label confidence.
+### 4. Critique Extraction
+Regex-based NLP extracts complaints, suggestions, enquiries, improvements, disappointments, and praise from the transcript.
 
-The result? Every call gets a **confidence score from 0 to 1.0** — and with Groq, we consistently hit **0.85–0.99**.
-
-### Step 4 — Critique Extraction
-We also run a regex-based NLP layer that extracts actionable feedback from the transcript: complaints, suggestions, enquiries, expressions of disappointment, happy remarks, and concrete improvement ideas. These appear in the Critique tab.
-
-### Step 5 — Agent Briefing
-Using Groq again (or falling back gracefully), we generate a short **Approach Brief** for customer service agents — what tone to use, what topics to avoid, and the key pain point to address first.
+### 5. Agent Briefing
+Groq generates an Approach Brief with recommended tone, topics to avoid, and key pain points.
 
 ---
 
@@ -94,7 +87,7 @@ After processing calls across English, Hindi, Telugu, and Tamil, here's what the
 | **Avg Processing Time (per call)** | ~60–90 seconds (varies with audio length) |
 | **Critique Types Detected** | 6 categories (Complaint, Suggestion, Enquiry, Improvement, Disappointed, Happy) |
 
-> The Groq-powered primary classifier consistently delivers **0.85+ confidence** on real-world customer calls — a massive jump from the ~0.35 average we got with 5-label DeBERTa zero-shot alone. The two-tier architecture gives us both: *LLM-level accuracy* with a *local safety net*.
+> The Groq-powered primary classifier delivers **0.85+ confidence** on real-world customer calls, with a local DeBERTa-v3 fallback when Groq is unavailable.
 
 ---
 
@@ -138,23 +131,7 @@ The frontend automatically loads completed calls from MongoDB on page reload, so
 
 ## 📸 Screenshots
 
-### Dashboard
-![Dashboard](screenshots/dashboard.png)
-
-### Upload
-![Upload](screenshots/upload.png)
-
-### Sentiment Graphs
-![Graphs](screenshots/graphs.png)
-
-### Critique & Improvements
-![Critique](screenshots/critique.png)
-
-### Customer Intel
-![Intel](screenshots/intel.png)
-
-### Agent Performance
-![Agents](screenshots/agents.png)
+See the [screenshots](./screenshots/) folder for dashboard, upload, graphs, critique, intel, and agent performance views.
 
 ---
 
@@ -206,7 +183,7 @@ REDIS_URL=redis://localhost:6379/0
 cd backend
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
-The API is now live at `http://localhost:8000`. Check `http://localhost:8000/docs` for the auto-generated Swagger UI.
+The API is live at `http://localhost:8000`.
 
 ### 4. Start the Celery Worker
 
@@ -217,7 +194,7 @@ celery -A tasks worker --loglevel=info --pool=solo
 ```
 The `--pool=solo` flag is required on Windows. Celery handles the heavy lifting (transcription, diarization, classification) asynchronously.
 
-> 💡 **One-file-at-a-time mode**: We intentionally use `--pool=solo` to process calls sequentially. This prevents GPU memory exhaustion since WhisperX and Pyannote together can easily overflow 8GB of VRAM if run concurrently.
+> `--pool=solo` processes one file at a time to prevent GPU memory exhaustion.
 
 ### 5. Start the Frontend (Vite + Vue)
 
@@ -231,7 +208,7 @@ The UI is now live at `http://localhost:5173`.
 
 ### 6. Upload & Analyze
 
-Open the browser, head to the **Upload** tab, pick an audio file, select the language, and hit upload. Watch the progress bar as the file moves through transcription → diarization → classification. Once done, all six dashboard tabs populate automatically.
+Open the browser, go to **Upload**, pick an audio file, select the language, and upload.
 
 ---
 
@@ -282,12 +259,6 @@ sentiment-pulse-analyzer/
 
 ---
 
-## 🙋‍♂️ Author
+## Author
 
-Built by [**AayuShen**](https://github.com/AayuShen) — an exploration into making LLM-powered sentiment analysis practical, fast, and genuinely useful for customer service teams.
-
-If you find this project interesting, drop a ⭐ on the repo! Got questions or ideas? Open an issue — I'm happy to chat.
-
----
-
-*"The goal isn't to replace human intuition — it's to amplify it with data."*
+Built by [**AayuShen**](https://github.com/AayuShen).
